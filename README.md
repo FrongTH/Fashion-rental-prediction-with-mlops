@@ -25,3 +25,14 @@ Fashion rental owners face challenges in determining the best rental prices for 
 - Code Quality: Use linters and code formatters to maintain code quality and consistency.
 - Automation: Create a Makefile to automate common tasks and use pre-commit hooks for code validation.
 - CI/CD Pipeline: Set up a CI/CD pipeline to automate the testing, integration, and deployment processes.
+
+# Tools and Technologies Used
+- Experiment Tracking and Model Registry : soon..
+- Workflow Orchestration : soon..
+- Containerization : soon..
+- Model Deployment : soon..
+- Model Monitoring : soon..
+- Best Practices : soon..
+
+# Data set
+- Kaggle: dress rental prices [https://www.kaggle.com/datasets/willianoliveiragibin/dress-rental-prices/suggestions?status=pending&yourSuggestions=true]
