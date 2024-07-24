@@ -36,3 +36,6 @@ Fashion rental owners face challenges in determining the best rental prices for 
 
 # Data set
 - Kaggle: [Dress rental prices](https://www.kaggle.com/datasets/willianoliveiragibin/dress-rental-prices/suggestions?status=pending&yourSuggestions=true)
+
+# Project step by step
+Soon...
