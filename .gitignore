@@ -1,7 +1,2 @@
 notebook/mlflow.db
-notebook/mlruns/1/b291c528643b4d0bad44a21365b7e395/artifacts/iris_model/conda.yaml
-notebook/mlruns/1/b291c528643b4d0bad44a21365b7e395/artifacts/iris_model/input_example.json
-notebook/mlruns/1/b291c528643b4d0bad44a21365b7e395/artifacts/iris_model/MLmodel
-notebook/mlruns/1/b291c528643b4d0bad44a21365b7e395/artifacts/iris_model/model.pkl
-notebook/mlruns/1/b291c528643b4d0bad44a21365b7e395/artifacts/iris_model/python_env.yaml
-notebook/mlruns/1/b291c528643b4d0bad44a21365b7e395/artifacts/iris_model/requirements.txt
+mlruns
