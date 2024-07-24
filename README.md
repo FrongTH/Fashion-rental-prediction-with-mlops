@@ -7,7 +7,7 @@ The goal of this project is to leverage Machine Learning Operations (MLOps) to d
 Fashion rental owners face challenges in determining the best rental prices for their inventory. Setting prices too high can deter potential customers, while prices set too low can lead to missed revenue opportunities. The objective is to build an intelligent system that dynamically predicts rental prices based on various factors such as item popularity, seasonal trends, historical data, and customer preferences.
 
 ## Objectives
-### 1.Understand Cloud Integration:
+\t### 1.Understand Cloud Integration:
 
 Utilize cloud services to store data, train models, and deploy the solution, ensuring scalability and flexibility.
 
