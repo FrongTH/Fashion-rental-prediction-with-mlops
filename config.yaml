@@ -1,3 +1,4 @@
 ## Data ##
 'DATA_PATH' : '../data/dress_rental_prices news.csv'
-
+'WORK_DIR' : '..'
+'INGESTION_PATH' : 'ingest'
