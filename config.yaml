@@ -2,3 +2,8 @@
 'DATA_PATH' : '../data/dress_rental_prices news.csv'
 'WORK_DIR' : '..'
 'INGESTION_PATH' : 'ingest'
+'SPLIT_PATH' : 'split'
+'TRAIN_PATH' : 'train'
+'TEST_PATH' : 'test'
+'VALIDATION_PATH' : 'validation'
+
