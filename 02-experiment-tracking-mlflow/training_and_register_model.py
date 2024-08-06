@@ -7,6 +7,7 @@ from hyperopt import tpe
 from glob import glob
 import os
 from mlflow import MlflowClient
+import pickle
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -17,7 +18,7 @@ import argparse
 
 from mlflow.tracking import MlflowClient
 from mlflow.entities import ViewType
-
+from sklearn.feature_extraction import DictVectorizer 
 
 
 
@@ -78,6 +79,13 @@ if __name__ == '__main__':
     mlflow.sklearn.autolog()
     with mlflow.start_run() as run:
         estim.fit(x_train, y_train)
+
+    with open("models/preprocessor.b", "wb") as f_out:
+        pickle.dump(DictVectorizer(), f_out)
+    mlflow.log_artifact("models/preprocessor.b", artifact_path="preprocessor")
+
+    mlflow.sklearn.log_model(estim, artifact_path="models_mlflow")
+
 
     # Get the experiment by name
     experiment_name = "fashion-rental-prediction"
