@@ -20,11 +20,11 @@ def save_ingestion(df, config):
     - None
     """
     datetimerun = datetime.now().strftime("%Y-%m-%d-%H-%M")
-    ingest_saved_path = os.path.join(config['WORK_DIR'], config['INGESTION_PATH'], datetimerun)
+    ingest_saved_path = os.path.join(config['WORK_DIR'], config['DATA_ROOT'], config['INGESTION_PATH'], datetimerun)
     
     # Create the ingestion path if it does not exist
-    if not os.path.exists(os.path.join(config['WORK_DIR'], config['INGESTION_PATH'])):
-        os.makedirs(os.path.join(config['WORK_DIR'], config['INGESTION_PATH']))
+    if not os.path.exists(os.path.join(config['WORK_DIR'], config['DATA_ROOT'], config['INGESTION_PATH'])):
+        os.makedirs(os.path.join(config['WORK_DIR'], config['DATA_ROOT'], config['INGESTION_PATH']))
         
     # Save the DataFrame if the ingest_saved_path does not exist
     if not os.path.exists(ingest_saved_path):

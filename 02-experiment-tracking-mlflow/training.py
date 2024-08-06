@@ -8,6 +8,13 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from sklearn.feature_extraction import DictVectorizer
 import warnings
+from mlflow.tracking import MlflowClient
+import mlflow
+from hpsklearn import HyperoptEstimator, any_regressor
+from mlflow.entities import ViewType
+from hyperopt import tpe
+import pickle
+
 warnings.filterwarnings('ignore')
 
 datetimerun = datetime.now().strftime("%Y-%m-%d-%H-%M")
@@ -15,8 +22,10 @@ datetimerun = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
 parser = argparse.ArgumentParser(description="Read data from a CSV file using configuration file.")
 parser.add_argument('--config', type=str, default='../config.yaml', help="Path to the configuration YAML file.")
-
-
+mlflow.set_tracking_uri("sqlite:///mlflow.db")
+mlflow.set_experiment("fashion-rental-prediction")
+# Initialize the MLflow client
+client = MlflowClient()
 def read_csv(config_path: str = parser.parse_args().config) -> pd.DataFrame:
     """
     Reads data from a CSV file specified in the configuration file.
@@ -42,7 +51,7 @@ def read_csv(config_path: str = parser.parse_args().config) -> pd.DataFrame:
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
 
-    data_path = glob(f'{os.path.join(config["WORK_DIR"], config["INGESTION_PATH"])}/*/*ingest.csv')[-1]
+    data_path = glob(f'{os.path.join(config["WORK_DIR"], config["DATA_ROOT"], config["INGESTION_PATH"])}/*/*ingest.csv')[-1]
     df = pd.read_csv(data_path)
     return df
 
@@ -216,7 +225,7 @@ def split_dataframe(data, target_column, train_size=0.7, validation_size=0.2, te
     x_test = test_features
     y_test = test_target
     
-    return x_train, y_train, x_validation, y_validation, x_test, y_test
+    return x_train, y_train, x_validation, y_validation, x_test, y_test, vec
 
 def save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, config_path: str):
     """
@@ -236,7 +245,7 @@ def save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, conf
     
     # Create the base path using current datetime
     datetimerun = datetime.now().strftime("%Y-%m-%d-%H-%M")
-    base_path = os.path.join(config['WORK_DIR'], 'split', datetimerun)
+    base_path = os.path.join(config['WORK_DIR'], config["DATA_ROOT"],'split', datetimerun)
     
     # Create the base and subdirectories if they do not exist
     subdirs = ['train', 'validation', 'test']
@@ -270,5 +279,36 @@ if __name__ == '__main__':
     df = read_csv(args.config)
     transform_df, sub_categories = transform(df)
     feature_engineering_df = feature_engineering(transform_df, sub_categories)
-    x_train, y_train, x_validation, y_validation, x_test, y_test = split_dataframe(feature_engineering_df, target_column='Price')
+    x_train, y_train, x_validation, y_validation, x_test, y_test, vec = split_dataframe(feature_engineering_df, target_column='Price')
     save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, args.config)
+
+    estim = HyperoptEstimator(regressor=any_regressor('reg'),
+                                algo=tpe.suggest, 
+                                trial_timeout=300,
+                          )
+
+    mlflow.sklearn.autolog()
+    with mlflow.start_run() as run:
+        estim.fit(x_train, y_train)
+
+    with open("models/preprocessor.b", "wb") as f_out:
+        pickle.dump(vec, f_out)
+    mlflow.log_artifact("models/preprocessor.b", artifact_path="preprocessor")
+
+    mlflow.sklearn.log_model(estim, artifact_path="models_mlflow")
+
+
+    # Get the experiment by name
+    experiment_name = "fashion-rental-prediction"
+    experiment = client.get_experiment_by_name(experiment_name)
+
+    best_run = client.search_runs(
+            experiment_ids=experiment.experiment_id,
+            run_view_type = ViewType.ACTIVE_ONLY,
+            max_results=5,
+            order_by=["metrics.training_root_mean_squared_error"]
+        )[0]
+
+    run_id = best_run.info.run_id
+    model_uri = "runs/{run_id}/model"
+    mlflow.register_model(model_uri=model_uri, name="best_optimized_model")

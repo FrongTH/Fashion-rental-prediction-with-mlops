@@ -1,5 +1,6 @@
 ## Data ##
 'DATA_PATH' : '../data/dress_rental_prices news.csv'
+'DATA_ROOT' : 'data'
 'WORK_DIR' : '..'
 'INGESTION_PATH' : 'ingest'
 'SPLIT_PATH' : 'split'

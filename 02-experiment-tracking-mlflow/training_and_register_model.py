@@ -7,6 +7,7 @@ from hyperopt import tpe
 from glob import glob
 import os
 from mlflow import MlflowClient
+import pickle
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -17,13 +18,14 @@ import argparse
 
 from mlflow.tracking import MlflowClient
 from mlflow.entities import ViewType
-
+from sklearn.feature_extraction import DictVectorizer 
 
 
 
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("fashion-rental-prediction")
-
+# Initialize the MLflow client
+client = MlflowClient()
 parser = argparse.ArgumentParser(description="Read data from a CSV file using configuration file.")
 parser.add_argument('--config', type=str, default='../config.yaml', help="Path to the configuration YAML file.")
 
@@ -53,13 +55,6 @@ def read_csv(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
     return df
 
-def fetch_logged_data(run_id):
-    client = MlflowClient()
-    data = client.get_run(run_id).data
-    tags = {k: v for k, v in data.tags.items() if not k.startswith("mlflow.")}
-    artifacts = [f.path for f in client.list_artifacts(run_id, "model")]
-    return data.params, data.metrics, tags, artifacts
-
 if __name__ == '__main__':
     # lasso = Lasso(alpha=0.1)
     # bayesian = BayesianRidge()
@@ -73,32 +68,36 @@ if __name__ == '__main__':
     
     with open(args.config, 'r') as file:
             config = yaml.safe_load(file)
-    lastest_path = glob(os.path.join(config['WORK_DIR'], config['SPLIT_PATH'], '*'))[-1]
+    lastest_path = glob(os.path.join(config['WORK_DIR'], config['DATA_ROOT'], config['SPLIT_PATH'], '*'))[-1]
 
-    x_train = read_csv(os.path.join(lastest_path, config['TRAIN_PATH'], 'x_train.csv'))
-    y_train = read_csv(os.path.join(lastest_path, config['TRAIN_PATH'], 'y_train.csv'))
+    x_train = read_csv(os.path.join(lastest_path, config['TRAIN_PATH'],'x_train.csv'))
+    y_train = read_csv(os.path.join(lastest_path, config['TRAIN_PATH'],'y_train.csv'))
         
-    x_validation = read_csv(os.path.join(lastest_path, config['VALIDATION_PATH'], 'x_validation.csv'))
-    y_validation = read_csv(os.path.join(lastest_path, config['VALIDATION_PATH'], 'y_validation.csv'))
+    x_validation = read_csv(os.path.join(lastest_path, config['VALIDATION_PATH'],'x_validation.csv'))
+    y_validation = read_csv(os.path.join(lastest_path, config['VALIDATION_PATH'],'y_validation.csv'))
     
     mlflow.sklearn.autolog()
     with mlflow.start_run() as run:
         estim.fit(x_train, y_train)
 
-    client = MlflowClient()
-    experiment = client.get_experiment_by_name("fashion-rental-prediction")
-    best_run = MlflowClient().search_runs(
-                                            experiment_ids=experiment.experiment_id,
-                                            run_view_type=ViewType.ACTIVE_ONLY,
-                                            max_results=1,
-                                            order_by=["metrics.training_root_mean_squared_error"]
-                                            )[0]
-    
-    run_id = best_run.info.run_id
-    run_id = best_run.info.run_id
-    model_uri = f"runs:/{run_id}/model"
+    with open("models/preprocessor.b", "wb") as f_out:
+        pickle.dump(DictVectorizer(), f_out)
+    mlflow.log_artifact("models/preprocessor.b", artifact_path="preprocessor")
 
-    mlflow.register_model(
-                            model_uri = model_uri,
-                            name = "sklearn-regressor-model"
-                            )
+    mlflow.sklearn.log_model(estim, artifact_path="models_mlflow")
+
+
+    # Get the experiment by name
+    experiment_name = "fashion-rental-prediction"
+    experiment = client.get_experiment_by_name(experiment_name)
+
+    best_run = client.search_runs(
+            experiment_ids=experiment.experiment_id,
+            run_view_type = ViewType.ACTIVE_ONLY,
+            max_results=5,
+            order_by=["metrics.training_root_mean_squared_error"]
+        )[0]
+
+    run_id = best_run.info.run_id
+    model_uri = "runs/{run_id}/model"
+    mlflow.register_model(model_uri=model_uri, name="best_optimized_model")
