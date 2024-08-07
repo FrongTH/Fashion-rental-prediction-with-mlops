@@ -15,18 +15,22 @@ from mlflow.entities import ViewType
 from hyperopt import tpe
 import pickle
 
+from sklearn.linear_model import Lasso, BayesianRidge, SGDRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.metrics import mean_squared_error, root_mean_squared_error
+from tqdm import tqdm
+
 warnings.filterwarnings('ignore')
 
 datetimerun = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
 
-parser = argparse.ArgumentParser(description="Read data from a CSV file using configuration file.")
-parser.add_argument('--config', type=str, default='../config.yaml', help="Path to the configuration YAML file.")
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("fashion-rental-prediction")
 # Initialize the MLflow client
 client = MlflowClient()
-def read_csv(config_path: str = parser.parse_args().config) -> pd.DataFrame:
+
+def read_csv(config_path: str) -> pd.DataFrame:
     """
     Reads data from a CSV file specified in the configuration file.
 
@@ -274,41 +278,41 @@ def save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, conf
     x_test_df.to_csv(os.path.join(base_path, 'test', 'x_test.csv'), index=False)
     y_test_df.to_csv(os.path.join(base_path, 'test', 'y_test.csv'), index=False)
     
+def run(config):
+    with mlflow.start_run():
+        mlflow.sklearn.autolog(log_models=True)
+
+        lasso = Lasso(alpha=0.1)
+        bayesian = BayesianRidge()
+        sgd = SGDRegressor()
+        neighbor = KNeighborsRegressor()
+
+        df = read_csv(config)
+        transform_df, sub_categories = transform(df)
+        feature_engineering_df = feature_engineering(transform_df, sub_categories)
+        x_train, y_train, x_validation, y_validation, x_test, y_test, vec = split_dataframe(feature_engineering_df, target_column='Price')
+        save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, config)
+
+        for model in tqdm([lasso, bayesian, sgd, neighbor]):
+            print(f'{str(model.__class__.__name__)} is on processing....')
+
+            model.fit(x_train, y_train)
+            pred = model.predict(x_test)
+
+            mse = mean_squared_error(y_test, pred)
+            rmse = root_mean_squared_error(y_test, pred)
+
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config',
+                        type=str,
+                        default='../config.yaml',
+                        help="Path to the configuration YAML file."
+                    )
+
+    
     args = parser.parse_args()
-    df = read_csv(args.config)
-    transform_df, sub_categories = transform(df)
-    feature_engineering_df = feature_engineering(transform_df, sub_categories)
-    x_train, y_train, x_validation, y_validation, x_test, y_test, vec = split_dataframe(feature_engineering_df, target_column='Price')
-    save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, args.config)
 
-    estim = HyperoptEstimator(regressor=any_regressor('reg'),
-                                algo=tpe.suggest, 
-                                trial_timeout=300,
-                          )
-
-    mlflow.sklearn.autolog()
-    with mlflow.start_run() as run:
-        estim.fit(x_train, y_train)
-
-    with open("models/preprocessor.b", "wb") as f_out:
-        pickle.dump(vec, f_out)
-    mlflow.log_artifact("models/preprocessor.b", artifact_path="preprocessor")
-
-    mlflow.sklearn.log_model(estim, artifact_path="models_mlflow")
-
-
-    # Get the experiment by name
-    experiment_name = "fashion-rental-prediction"
-    experiment = client.get_experiment_by_name(experiment_name)
-
-    best_run = client.search_runs(
-            experiment_ids=experiment.experiment_id,
-            run_view_type = ViewType.ACTIVE_ONLY,
-            max_results=5,
-            order_by=["metrics.training_root_mean_squared_error"]
-        )[0]
-
-    run_id = best_run.info.run_id
-    model_uri = "runs/{run_id}/model"
-    mlflow.register_model(model_uri=model_uri, name="best_optimized_model")
+    run(args.config)
+    
