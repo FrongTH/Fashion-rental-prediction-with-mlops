@@ -10,9 +10,6 @@ from sklearn.feature_extraction import DictVectorizer
 import warnings
 from mlflow.tracking import MlflowClient
 import mlflow
-from hpsklearn import HyperoptEstimator, any_regressor
-from mlflow.entities import ViewType
-from hyperopt import tpe
 import pickle
 
 from sklearn.linear_model import Lasso, BayesianRidge, SGDRegressor
@@ -29,6 +26,8 @@ mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("fashion-rental-prediction")
 # Initialize the MLflow client
 client = MlflowClient()
+
+
 
 def read_csv(config_path: str) -> pd.DataFrame:
     """
@@ -278,29 +277,28 @@ def save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, conf
     x_test_df.to_csv(os.path.join(base_path, 'test', 'x_test.csv'), index=False)
     y_test_df.to_csv(os.path.join(base_path, 'test', 'y_test.csv'), index=False)
     
-def run(config):
+def run(config, model):
     with mlflow.start_run():
+        
         mlflow.sklearn.autolog(log_models=True)
-
-        lasso = Lasso(alpha=0.1)
-        bayesian = BayesianRidge()
-        sgd = SGDRegressor()
-        neighbor = KNeighborsRegressor()
 
         df = read_csv(config)
         transform_df, sub_categories = transform(df)
         feature_engineering_df = feature_engineering(transform_df, sub_categories)
         x_train, y_train, x_validation, y_validation, x_test, y_test, vec = split_dataframe(feature_engineering_df, target_column='Price')
         save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, config)
+        
+        print(f'{str(model.__class__.__name__)} is on processing....')
+        model.fit(x_train, y_train)
 
-        for model in tqdm([lasso, bayesian, sgd, neighbor]):
-            print(f'{str(model.__class__.__name__)} is on processing....')
+        mlflow.sklearn.log_model(model, artifact_path = 'mflow_models_sklearn')
+        
+        pred = model.predict(x_test)
 
-            model.fit(x_train, y_train)
-            pred = model.predict(x_test)
-
-            mse = mean_squared_error(y_test, pred)
-            rmse = root_mean_squared_error(y_test, pred)
+        mse = mean_squared_error(y_test, pred)
+        rmse = root_mean_squared_error(y_test, pred)
+        mlflow.log_metric("root_mean_squared_error", rmse)
+        mlflow.log_metric("mean_squared_error", mse)
 
 if __name__ == '__main__':
 
@@ -313,6 +311,10 @@ if __name__ == '__main__':
 
     
     args = parser.parse_args()
-
-    run(args.config)
+    lasso = Lasso(alpha=0.1)
+    bayesian = BayesianRidge()
+    sgd = SGDRegressor()
+    neighbor = KNeighborsRegressor()
+    for model in tqdm([lasso, bayesian, sgd, neighbor]):
+        run(args.config, model)
     
