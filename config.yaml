@@ -7,4 +7,5 @@
 'TRAIN_PATH' : 'train'
 'TEST_PATH' : 'test'
 'VALIDATION_PATH' : 'validation'
+'TOP_N' : 5
 
