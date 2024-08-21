@@ -29,6 +29,7 @@ mlflow.set_tracking_uri("sqlite:///mlflow.db")
 mlflow.set_experiment("fashion-rental-prediction")
 # Initialize the MLflow client
 client = MlflowClient()
+mlflow.sklearn.autolog()
 
 
 
