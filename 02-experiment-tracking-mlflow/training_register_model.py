@@ -30,6 +30,7 @@ mlflow.set_experiment("fashion-rental-prediction")
 # Initialize the MLflow client
 client = MlflowClient()
 mlflow.sklearn.autolog()
+# mlflow.autolog()
 
 
 
@@ -297,6 +298,8 @@ def train_and_log_model(data_path, params):
     y_test = pd.read_csv(os.path.join(data_path, 'test', 'y_test.csv'))
 
     with mlflow.start_run():
+
+        ## เปลี่ยนตรงนี้ใหม่ error here
         # params = space_eval(SPACE, params)
         # model = KNeighborsRegressor(**params)
         # model.fit(x_train, y_train)
@@ -304,8 +307,8 @@ def train_and_log_model(data_path, params):
         model = HyperoptEstimator(regressor=k_neighbors_regressor("my_knn"),
                               preprocessing=[],
                               algo=tpe.suggest,
-                              max_evals=10,
-                              trial_timeout=300)
+                              max_evals=5,
+                              trial_timeout=60)
         
         model.fit(x_train, y_train)
 
