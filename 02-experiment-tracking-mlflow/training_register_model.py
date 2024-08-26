@@ -12,13 +12,15 @@ from hpsklearn import HyperoptEstimator, k_neighbors_regressor
 
 import mlflow
 from mlflow.entities import ViewType
-# from hyperopt import hp, space_eval
-# from hyperopt.pyll import scope
+from hyperopt import hp, space_eval, Trials
+from hyperopt.pyll import scope
 from hyperopt import tpe
 
 
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, root_mean_squared_error
+from sklearn.ensemble import RandomForestRegressor
+
 
 warnings.filterwarnings('ignore')
 
@@ -282,13 +284,7 @@ def save_data(x_train, y_train, x_validation, y_validation, x_test, y_test, conf
     x_test_df.to_csv(os.path.join(base_path, 'test', 'x_test.csv'), index=False)
     y_test_df.to_csv(os.path.join(base_path, 'test', 'y_test.csv'), index=False)
 
-# SPACE = {
-#     'max_depth': scope.int(hp.uniform('max_depth', 1, 20, 1)),
-#     'n_estimators': scope.int(hp.uniform('n_estimators', 10, 50, 1)),
-#     'min_samples_split': scope.int(hp.uniform('min_samples_split', 2, 10, 1)),
-#     'min_samples_leaf': scope.int(hp.uniform('min_samples_leaf', 1, 4, 1)),
-#     'random_state': 42
-# }
+
 
 def train_and_log_model(data_path, params):
     x_train = pd.read_csv(os.path.join(data_path, 'train', 'x_train.csv'))
@@ -298,19 +294,30 @@ def train_and_log_model(data_path, params):
     y_test = pd.read_csv(os.path.join(data_path, 'test', 'y_test.csv'))
 
     with mlflow.start_run():
-
-        ## เปลี่ยนตรงนี้ใหม่ error here
+    #     SPACE = {
+    #     'max_depth': scope.int(hp.quniform('max_depth', 1, 20, 1)),
+    #     'n_estimators': scope.int(hp.quniform('n_estimators', 10, 50, 1)),
+    #     'min_samples_split': scope.int(hp.quniform('min_samples_split', 2, 10, 1)),
+    #     'min_samples_leaf': scope.int(hp.quniform('min_samples_leaf', 1, 4, 1)),
+    #     'random_state': 42
+    # }
+        # Run log_param ก่อนนนน
+        # 1.training mlflow
+        # 2.hpo
+        # 3.register model
+        # เปลี่ยนตรงนี้ใหม่ error here
+        # trials = Trials()
         # params = space_eval(SPACE, params)
-        # model = KNeighborsRegressor(**params)
+        # model = RandomForestRegressor(**params)
         # model.fit(x_train, y_train)
 
-        model = HyperoptEstimator(regressor=k_neighbors_regressor("my_knn"),
-                              preprocessing=[],
-                              algo=tpe.suggest,
-                              max_evals=5,
-                              trial_timeout=60)
+        # model = HyperoptEstimator(regressor=k_neighbors_regressor("my_knn"),
+        #                       preprocessing=[],
+        #                       algo=tpe.suggest,
+        #                       max_evals=5,
+        #                       trial_timeout=60)
         
-        model.fit(x_train, y_train)
+        # model.fit(x_train, y_train)
 
         # evaluate model on the validation and test sets
         # valid_rmse = mean_squared_error(y_valid, rf.predict(X_valid), squared=False)
